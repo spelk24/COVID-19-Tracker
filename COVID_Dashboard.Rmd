@@ -1,0 +1,117 @@
+---
+title: "COVID-19 Tracking"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+    css: tables.css
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+options(scipen = 999)
+library(flexdashboard)
+library(plotly)
+library(reactable)
+library(tibbletime)
+source("COVID_Data_Pull.R") # Pull in new data
+```
+
+Row {data-width=650}
+-----------------------------------------------------------------------
+
+### State Summary
+
+```{r}
+## TODO
+# Add in last 7 day moving average sparkline (split by cases and deaths?)
+today_state_data <- state_data %>% 
+  filter(Date == today-1) %>% 
+  ungroup() %>% 
+  select(State, Cases, Deaths) %>% 
+  arrange(desc(Cases))
+
+reactable(
+  data = today_state_data,
+  sortable = TRUE,
+  bordered = FALSE,
+  fullWidth = TRUE,
+  class = "covid_table",
+  columns = list(
+    Cases = colDef(format = colFormat(separators = TRUE)),
+    Deaths = colDef(format = colFormat(separators = TRUE))
+  )
+)
+```
+
+### Daily Cases
+
+```{r}
+rolling14 <- rollify(mean, window = 14, na_value = 0)
+daily_data <- country_data %>%
+  arrange(Date) %>% 
+  select(Date,Cases,Deaths) %>% 
+  mutate(New_Cases = Cases - lag(Cases),
+         New_Deaths = Deaths - lag(Deaths)) %>% 
+  replace_na(list(New_Cases = .[[1,2]],
+                  New_Deaths = .[[1,3]])) %>%
+  mutate(Rolling14Cases = round(rolling14(New_Cases)),
+         Rolling14Deaths = round(rolling14(New_Deaths)))
+
+daily_cases_fig <- plot_ly(
+  x = daily_data$Date,
+  y = daily_data$New_Cases,
+  name = "Daily Cases",
+  type = "bar",
+  marker = list(color = 'rgb(158,202,225)')
+  )
+daily_cases_fig <- daily_cases_fig %>% add_trace(x = daily_data$Date,
+                                                 y = daily_data$Rolling14Cases,
+                                                 name = "Rolling 14-day Average",
+                                                 type = "scatter",
+                                                 mode = "lines+markers",
+                                                 marker = list(color = "rgb(49,130,189)", opacity=0),
+                                                 line = list(color = "rgb(49,130,189)", opacity=1)
+                                                 )
+# Update Layout
+daily_cases_fig <- daily_cases_fig %>% 
+  layout(title = "Daily Cases",
+         xaxis = list(title = "Date"),
+         yaxis = list(title = ""),
+         legend = list(x = 0.25, y = 1, orientation = "h")
+         )
+daily_cases_fig
+```
+
+Row {data-width=650}
+-----------------------------------------------------------------------
+
+### Daily Deaths
+
+```{r}
+daily_deaths_fig <- plot_ly(
+  x = daily_data$Date,
+  y = daily_data$New_Deaths,
+  name = "Daily Deaths",
+  type = "bar",
+  marker = list(color = 'rgb(254,224,210)')
+  )
+daily_deaths_fig <- daily_deaths_fig %>% add_trace(x = daily_data$Date,
+                                                 y = daily_data$Rolling14Deaths,
+                                                 name = "Rolling 14-day Average",
+                                                 type = "scatter",
+                                                 mode = "lines+markers",
+                                                 marker = list(color = "rgb(222,45,38)", opacity=0),
+                                                 line = list(color = "rgb(222,45,38)", opacity=1)
+                                                 )
+# Update Layout
+daily_deaths_fig <- daily_deaths_fig %>% 
+  layout(title = "Daily Deaths",
+         xaxis = list(title = "Date"),
+         yaxis = list(title = ""),
+         legend = list(x = 0.25, y = 1, orientation = "h")
+         )
+daily_deaths_fig
+```
+
+### Chart 4

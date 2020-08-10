@@ -1,0 +1,29 @@
+.covid_table {
+  margin: 0 auto;
+  font-family: Source Sans Pro;
+  color: #252525;
+}
+
+.title {
+  margin: 18px 0;
+  font-size: 14px;
+}
+
+.table_contents {
+  font-size: 11px;
+  line-height: 18px;
+  color: #252525;
+}
+
+
+.header {
+  border-bottom: 2px solid #555;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  color: #252525;
+}
+
+.header:hover {
+  background-color: #eee;
+}
