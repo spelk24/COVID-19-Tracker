@@ -14,6 +14,7 @@ library(flexdashboard)
 library(plotly)
 library(reactable)
 library(tibbletime)
+library(crosstalk)
 source("COVID_Data_Pull.R") # Pull in new data
 ```
 
@@ -55,6 +56,7 @@ daily_data <- country_data %>%
          New_Deaths = Deaths - lag(Deaths)) %>% 
   replace_na(list(New_Cases = .[[1,2]],
                   New_Deaths = .[[1,3]])) %>%
+  arrange(Date) %>% 
   mutate(Rolling14Cases = round(rolling14(New_Cases)),
          Rolling14Deaths = round(rolling14(New_Deaths)))
 
