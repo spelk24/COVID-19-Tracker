@@ -6,6 +6,7 @@ output:
     vertical_layout: fill
     css: tables.css
     source_code: embed
+runtime: shiny
 ---
 
 ```{r setup, include=FALSE}
@@ -13,16 +14,22 @@ options(scipen = 999)
 library(flexdashboard)
 library(plotly)
 library(reactable)
-library(crosstalk)
+library(shiny)
 source("COVID_Data_Pull.R") # Pull in new data
+state_list <- unique(daily_country_data$State)
+county_list <- unique(county_data$County)
 ```
 
 State Summary {data-icon="ion-stats-bars"}
 ===================================== 
 
-```{r filters}
+row {.sidebar}
+-----------------------------------------------------------------------
 
+```{r}
+selectInput("State","State/Territory",state_list, selected = "All", selectize = TRUE)
 ```
+
 
 Row {data-width=650}
 -----------------------------------------------------------------------
@@ -30,8 +37,8 @@ Row {data-width=650}
 ### State Summary
 
 ```{r}
-## TODO
-# Add in last 7 day moving average sparkline (split by cases and deaths?)
+orange_pal <- function(x) rgb(colorRamp(c("#ffe4cc", "#ffb54d"))(x), maxColorValue = 255)
+
 today_state_data <- state_data %>% 
   filter(Date == today-1) %>% 
   ungroup() %>% 
@@ -43,10 +50,23 @@ reactable(
   sortable = TRUE,
   bordered = FALSE,
   fullWidth = TRUE,
+  highlight = TRUE,
+  style = list(fontFamily = "Helvetica", fontSize = 12),
   class = "covid_table",
   columns = list(
-    Cases = colDef(format = colFormat(separators = TRUE)),
-    Deaths = colDef(format = colFormat(separators = TRUE))
+    Cases = colDef(style = function(value){
+      normalized_value <- (value - min(today_state_data$Cases)) / (max(today_state_data$Cases) - min(today_state_data$Cases))
+      color <- orange_pal(normalized_value)
+      list(background = color)
+    },
+      format = colFormat(separators = TRUE),
+      maxWidth = 100),
+    Deaths = colDef(style = function(value){
+      normalized_value <- (value - min(today_state_data$Deaths)) / (max(today_state_data$Deaths) - min(today_state_data$Deaths))
+      color <- orange_pal(normalized_value)
+      list(background = color)
+    },format = colFormat(separators = TRUE),
+      maxWidth = 100)
   )
 )
 ```
@@ -54,32 +74,39 @@ reactable(
 ### Daily Cases
 
 ```{r}
-# Shared Data
-plotly_data <- highlight_key(daily_country_data)
-bscols(
-  widths = c(3,NA),
-  filter_select("State_List", "State/Territory", plotly_data, ~State, allLevels = FALSE, multiple = FALSE),
-  plot_ly(
-    data = plotly_data,
-    x = ~Date,
-    y = ~New_Cases,
-    name = "Daily Cases",
-    type = "bar",
-    marker = list(color = 'rgb(158,202,225)')
-    ) %>% add_trace(x = ~Date,
+# Input Selections
+state_selected <- reactive({input$State})
+county_selected <- reactive({input$County})
+
+fig <- plot_ly(data = daily_country_data %>% filter(State == "All"))
+fig <- fig %>% add_bars(
+      x = ~Date,
+      y = ~New_Cases,
+      name = "Daily Cases",
+      type = "bar",
+      marker = list(color = 'rgb(158,202,225)')
+    ) %>% add_trace(
+                    x = ~Date,
                     y = ~Rolling14Cases,
                     name = "Rolling 14-day Average",
                     type = "scatter",
                     mode = "lines+markers",
                     marker = list(color = "rgb(49,130,189)", opacity=0),
-                    line = list(color = "rgb(49,130,189)", opacity=1)
+                    line = list(color = "rgb(49,130,189)", opacity=1),
+                    hovertemplate = "%{y}"
                     ) %>% 
-    layout(title = "Daily Cases",
+    layout(title = list(text = "Daily Cases", font = list(family = "Helvetica", color = "gray20", size = 18)),
            xaxis = list(title = "Date"),
            yaxis = list(title = ""),
-           legend = list(x = 0.25, y = 1, orientation = "h")
-           )
-  )
+           legend = list(x = 0.25, y = 1, orientation = "h"),
+           font = list(
+             family = "Helvetica",
+             size = 12,
+             color = "gray20"),
+           hovermode = "x unified"
+            ) %>% 
+  config(displayModeBar = F)
+fig
 ```
 
 Row {data-width=650}
@@ -88,29 +115,28 @@ Row {data-width=650}
 ### Daily Deaths
 
 ```{r}
-#daily_deaths_fig <- plot_ly(
-#  x = daily_data$Date,
-#  y = daily_data$New_Deaths,
-#  name = "Daily Deaths",
-#  type = "bar",
-#  marker = list(color = 'rgb(254,224,210)')
-#  )
-#daily_deaths_fig <- daily_deaths_fig %>% add_trace(x = daily_data$Date,
-#                                                 y = daily_data$Rolling14Deaths,
-#                                                 name = "Rolling 14-day Average",
-#                                                 type = "scatter",
-#                                                 mode = "lines+markers",
-#                                                 marker = list(color = "rgb(222,45,38)", opacity=0),
-#                                                 line = list(color = "rgb(222,45,38)", opacity=1)
-#                                                 )
-## Update Layout
-#daily_deaths_fig <- daily_deaths_fig %>% 
-#  layout(title = "Daily Deaths",
-#         xaxis = list(title = "Date"),
-#         yaxis = list(title = ""),
-#         legend = list(x = 0.25, y = 1, orientation = "h")
-#         )
-#daily_deaths_fig
+renderPlotly(plot_ly(
+  data = daily_country_data %>% filter(State == state_selected()),
+  x = ~Date,
+  y = ~New_Deaths,
+  name = "Daily Deaths",
+  type = "bar",
+  marker = list(color = 'rgb(254,224,210)')
+  ) %>% add_trace(x = ~Date,
+                  y = ~Rolling14Deaths,
+                  name = "Rolling 14-day Average",
+                  type = "scatter",
+                  mode = "lines+markers",
+                  marker = list(color = "rgb(222,45,38)", opacity=0),
+                  line = list(color = "rgb(222,45,38)", opacity=1)
+                  ) %>% 
+  layout(title = "Daily Deaths",
+         xaxis = list(title = "Date"),
+         yaxis = list(title = ""),
+         legend = list(x = 0.25, y = 1, orientation = "h")
+         ) %>% 
+  config(displayModeBar = F)
+)
 ```
 
 ### Chart 4

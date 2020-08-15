@@ -1,16 +1,16 @@
 .covid_table {
   margin: 0 auto;
-  font-family: Source Sans Pro;
+  font-family: Helvetica;
   color: #252525;
 }
 
 .title {
-  margin: 18px 0;
-  font-size: 14px;
+  margin: 16px 0;
+  font-size: 12px;
 }
 
 .table_contents {
-  font-size: 11px;
+  font-size: 10px;
   line-height: 18px;
   color: #252525;
 }
@@ -24,6 +24,17 @@
   color: #252525;
 }
 
-.header:hover {
-  background-color: #252525;
+/* Highlight headers when sorting */
+.header:hover,
+.header[aria-sort="ascending"],
+.header[aria-sort="descending"] {
+  background-color: #eee;
+}
+
+.cases {
+  width: 100px;
+  height: 50px;
+  border-radius: 50%;
+  color: #000;
+  letter-spacing: -2px;
 }

@@ -76,5 +76,4 @@ for (st in states) {
   daily_country_data <- bind_rows(daily_country_data,temp_df)
 }
 
-# Exclude CW Data For Now
-daily_country_data <- daily_country_data %>% filter(State != "All")
+daily_country_data <- daily_country_data %>% arrange(State)
