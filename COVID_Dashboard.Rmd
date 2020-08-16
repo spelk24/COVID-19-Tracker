@@ -15,6 +15,7 @@ library(flexdashboard)
 library(plotly)
 library(reactable)
 library(shiny)
+library(scales)
 source("COVID_Data_Pull.R") # Pull in new data
 state_list <- unique(daily_country_data$State)
 county_list <- unique(county_data$County)
@@ -75,37 +76,45 @@ reactable(
 
 ```{r}
 # Input Selections
-state_selected <- reactive({input$State})
-county_selected <- reactive({input$County})
+#state_selected <- reactive({input$State})
+#county_selected <- reactive({input$County})
+data <- daily_country_data %>% filter(State == "All")
 
-fig <- plot_ly(data = daily_country_data %>% filter(State == "All"))
-fig <- fig %>% add_bars(
+fig <- plot_ly(data)
+fig <- fig %>% 
+    add_bars(
       x = ~Date,
       y = ~New_Cases,
       name = "Daily Cases",
       type = "bar",
-      marker = list(color = 'rgb(158,202,225)')
-    ) %>% add_trace(
-                    x = ~Date,
-                    y = ~Rolling14Cases,
-                    name = "Rolling 14-day Average",
-                    type = "scatter",
-                    mode = "lines+markers",
-                    marker = list(color = "rgb(49,130,189)", opacity=0),
-                    line = list(color = "rgb(49,130,189)", opacity=1),
-                    hovertemplate = "%{y}"
-                    ) %>% 
-    layout(title = list(text = "Daily Cases", font = list(family = "Helvetica", color = "gray20", size = 18)),
-           xaxis = list(title = "Date"),
-           yaxis = list(title = ""),
-           legend = list(x = 0.25, y = 1, orientation = "h"),
-           font = list(
-             family = "Helvetica",
-             size = 12,
-             color = "gray20"),
-           hovermode = "x unified"
-            ) %>% 
-  config(displayModeBar = F)
+      marker = list(color = 'rgb(254,224,210)'),
+      hoverinfo = "text",
+      text = paste0("<b>",data$Date,"</b><br>","Cases: ",comma(data$New_Cases, accuracy = 1))
+    ) %>% 
+    add_trace(
+      x = ~Date,
+      y = ~Rolling14Cases,
+      name = "Rolling 14-day Average",
+      type = "scatter",
+      mode = "lines+markers",
+      marker = list(color = "rgb(222,45,38)", opacity=0),
+      line = list(color = "rgb(222,45,38)", opacity=1),
+      hoverinfo = "text",
+      text = paste0("<b>",data$Date,"</b><br>","14-day Avg: ",comma(data$Rolling14Cases, accuracy = 1))
+      ) %>% 
+    layout(
+      title = list(text = "Daily Cases", font = list(family = "Helvetica", color = "gray20", size = 18)),
+      xaxis = list(title = "Date"),
+      yaxis = list(title = ""),
+      font = list(
+        family = "Helvetica",
+        size = 12,
+        color = "gray20"),
+      hovermode = "x unified",
+      margin = list(t = 30),
+      legend = list(x = 0.25, y = 1, orientation = "h")
+       ) %>% 
+    config(displayModeBar = F)
 fig
 ```
 
